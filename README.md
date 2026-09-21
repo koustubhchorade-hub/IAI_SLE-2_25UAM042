@@ -46,8 +46,3 @@ ChatGPT was used to understand BFS and DFS, structure the Python implementation,
 ## Conclusion
 
 The experiment shows that **execution time and number of nodes expanded are separate performance measures**. The results depend on the graph, implementation, and execution environment.
-
-## Author
-
-**Koustubh Sampat Chorade**  
-**PRN:** 25UAM042
