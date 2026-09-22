@@ -1,8 +1,11 @@
 # SLE-2: BFS vs DFS Profiling
 
 **Course:** 02AML204 – Introduction to Artificial Intelligence
+
 **PRN:** 25UAM042
+
 **Name:** Koustubh Sampat Chorade
+
 **Division:** A
 
 ## About the Project
