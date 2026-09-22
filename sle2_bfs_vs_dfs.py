@@ -1,198 +1,442 @@
-import timeit
 from collections import deque
+import sys
 import networkx as nx
 import matplotlib.pyplot as plt
 
 
-# Generate a binary tree graph
-graph = {}
+# ==========================================================
+# 1. CREATE BINARY TREE
+# ==========================================================
 
-number_of_nodes = 16383
+def create_tree(depth):
 
-for i in range(number_of_nodes):
-    children = []
+    tree = {}
 
-    left = 2 * i + 1
-    right = 2 * i + 2
+    # Total nodes = 2^(depth+1) - 1
+    total_nodes = (2 ** (depth + 1)) - 1
 
-    if left < number_of_nodes:
-        children.append(left)
+    for node in range(1, total_nodes + 1):
 
-    if right < number_of_nodes:
-        children.append(right)
+        left = 2 * node
+        right = 2 * node + 1
 
-    graph[i] = children
+        children = []
+
+        if left <= total_nodes:
+            children.append(left)
+
+        if right <= total_nodes:
+            children.append(right)
+
+        if children:
+            tree[node] = children
+
+    return tree, total_nodes
 
 
-# ---------------- BFS ----------------
-def bfs(graph, start, goal):
+# ==========================================================
+# 2. DISPLAY TREE
+# ==========================================================
+
+def display_tree(tree, depth_to_display=5):
+
+    print("\nTREE STRUCTURE")
+    print("=" * 50)
+
+    current_level = [1]
+
+    for level in range(depth_to_display + 1):
+
+        print(f"Level {level}: ", end="")
+
+        for node in current_level:
+            print(node, end=" ")
+
+        print()
+
+        next_level = []
+
+        for node in current_level:
+
+            if node in tree:
+                next_level.extend(tree[node])
+
+        current_level = next_level
+
+
+# ==========================================================
+# 3. BFS
+# ==========================================================
+
+def bfs(tree, start, goal):
+
     queue = deque([start])
-    visited = set([start])
-    parent = {start: None}
+    visited = set()
+
     nodes_expanded = 0
 
     while queue:
+
         current = queue.popleft()
+
+        if current in visited:
+            continue
+
+        visited.add(current)
         nodes_expanded += 1
 
         if current == goal:
-            # Reconstruct path
-            path = []
-            while current is not None:
-                path.append(current)
-                current = parent[current]
+            return True, nodes_expanded
 
-            return nodes_expanded, path[::-1]
+        for child in tree.get(current, []):
 
-        for neighbor in graph[current]:
-            if neighbor not in visited:
-                visited.add(neighbor)
-                parent[neighbor] = current
-                queue.append(neighbor)
+            if child not in visited:
+                queue.append(child)
 
-    return nodes_expanded, []
+    return False, nodes_expanded
 
 
-# ---------------- DFS ----------------
-def dfs(graph, start, goal):
+# ==========================================================
+# 4. DFS
+# ==========================================================
+
+def dfs(tree, start, goal):
+
     stack = [start]
-    visited = set([start])
-    parent = {start: None}
+    visited = set()
+
     nodes_expanded = 0
 
     while stack:
+
         current = stack.pop()
+
+        if current in visited:
+            continue
+
+        visited.add(current)
         nodes_expanded += 1
 
         if current == goal:
-            # Reconstruct path
-            path = []
-            while current is not None:
-                path.append(current)
-                current = parent[current]
+            return True, nodes_expanded
 
-            return nodes_expanded, path[::-1]
+        # Reverse so left child is explored first
+        for child in reversed(tree.get(current, [])):
 
-        for neighbor in reversed(graph[current]):
-            if neighbor not in visited:
-                visited.add(neighbor)
-                parent[neighbor] = current
-                stack.append(neighbor)
+            if child not in visited:
+                stack.append(child)
 
-    return nodes_expanded, []
+    return False, nodes_expanded
 
 
-# ---------------- Start and Goal ----------------
-start = 0
-goal = 15000
+# ==========================================================
+# 5. BFS PROFILING WORKLOAD
+# ==========================================================
+
+def profile_bfs(tree, start, goal, runs=1000):
+
+    result = None
+
+    for _ in range(runs):
+        result = bfs(tree, start, goal)
+
+    return result
 
 
-# Run BFS and DFS
-bfs_nodes, bfs_path = bfs(graph, start, goal)
-dfs_nodes, dfs_path = dfs(graph, start, goal)
+# ==========================================================
+# 6. DFS PROFILING WORKLOAD
+# ==========================================================
+
+def profile_dfs(tree, start, goal, runs=1000):
+
+    result = None
+
+    for _ in range(runs):
+        result = dfs(tree, start, goal)
+
+    return result
 
 
-# ---------------- Measure Execution Time ----------------
-number_of_runs = 100
+# ==========================================================
+# 7. VISUALIZE GRAPH
+# ==========================================================
 
-bfs_time = timeit.timeit(
-    lambda: bfs(graph, start, goal),
-    number=number_of_runs
-)
+def visualize_graph(tree, bfs_path=None):
 
-dfs_time = timeit.timeit(
-    lambda: dfs(graph, start, goal),
-    number=number_of_runs
-)
+    # Display first 31 nodes
+    display_nodes = 31
 
+    G = nx.DiGraph()
 
-# Average time in milliseconds
-bfs_average = (bfs_time / number_of_runs) * 1000
-dfs_average = (dfs_time / number_of_runs) * 1000
+    for node in range(1, display_nodes + 1):
 
+        for child in tree.get(node, []):
 
-# ---------------- Display Results ----------------
-print("========== RESULTS ==========")
+            if child <= display_nodes:
+                G.add_edge(node, child)
 
-print("BFS nodes expanded:", bfs_nodes)
-print("DFS nodes expanded:", dfs_nodes)
+    # Create tree layout
+    pos = {}
 
-print("BFS average time:", bfs_average, "ms")
-print("DFS average time:", dfs_average, "ms")
+    levels = 5
 
-print("\nBFS Path:")
-print(bfs_path)
+    for level in range(levels + 1):
 
-print("\nDFS Path:")
-print(dfs_path)
+        start_node = 2 ** level
+        end_node = (2 ** (level + 1)) - 1
 
+        nodes_at_level = end_node - start_node + 1
 
-# =========================================================
-# VISUALIZE THE ACTUAL GRAPH
-# =========================================================
+        for j, node in enumerate(
+            range(start_node, end_node + 1)
+        ):
 
-# Display first 31 nodes of the SAME binary tree
-display_nodes = 31
+            x = (j + 1) / (nodes_at_level + 1)
+            y = -level
 
-G = nx.DiGraph()
+            pos[node] = (x, y)
 
-for node in range(display_nodes):
-    for child in graph[node]:
-        if child < display_nodes:
-            G.add_edge(node, child)
+    # Draw graph
+    plt.figure(figsize=(14, 8))
 
+    nx.draw(
+        G,
+        pos,
+        with_labels=True,
+        node_size=900,
+        font_size=9,
+        arrows=True
+    )
 
-# Create tree layout manually
-pos = {}
+    # Highlight BFS path if supplied
+    if bfs_path:
 
-levels = 5
+        bfs_edges = list(
+            zip(bfs_path[:-1], bfs_path[1:])
+        )
 
-for level in range(levels):
-    start_node = 2**level - 1
-    end_node = 2**(level + 1) - 2
+        visible_edges = [
+            edge
+            for edge in bfs_edges
+            if edge[0] <= display_nodes
+            and edge[1] <= display_nodes
+        ]
 
-    nodes_at_level = end_node - start_node + 1
+        nx.draw_networkx_edges(
+            G,
+            pos,
+            edgelist=visible_edges,
+            width=3
+        )
 
-    for j, node in enumerate(range(start_node, end_node + 1)):
-        x = (j + 1) / (nodes_at_level + 1)
-        y = -level
-        pos[node] = (x, y)
+    plt.title(
+        "Binary Tree Graph Used for BFS and DFS\n"
+        "(First 31 nodes shown)"
+    )
 
+    plt.axis("off")
 
-# Draw graph
-plt.figure(figsize=(14, 8))
-
-nx.draw(
-    G,
-    pos,
-    with_labels=True,
-    node_size=900,
-    font_size=9,
-    arrows=True
-)
-
-
-# Highlight BFS path
-bfs_edges = list(zip(bfs_path[:-1], bfs_path[1:]))
-
-# Only highlight edges visible in displayed graph
-bfs_edges_display = [
-    edge for edge in bfs_edges
-    if edge[0] < display_nodes and edge[1] < display_nodes
-]
-
-nx.draw_networkx_edges(
-    G,
-    pos,
-    edgelist=bfs_edges_display,
-    width=3
-)
+    plt.show()
 
 
-plt.title(
-    "Binary Tree Graph Used for BFS and DFS\n"
-    "(First 31 nodes shown from the 16,383-node graph)"
-)
+# ==========================================================
+# 8. MAIN PROGRAM
+# ==========================================================
 
-plt.axis("off")
-plt.show()
+def main():
+
+    START = 1
+
+    # Depth 15 = 65,535 nodes
+    TREE_DEPTH = 15
+
+    PROFILE_RUNS = 1000
+
+    # Create tree
+    tree, total_nodes = create_tree(TREE_DEPTH)
+
+    print("=" * 60)
+    print("          BFS vs DFS SEARCH PROFILING")
+    print("=" * 60)
+
+    print(f"\nTotal nodes in tree : {total_nodes}")
+    print(f"Tree depth          : {TREE_DEPTH}")
+
+    display_tree(tree, depth_to_display=5)
+
+    print("\n...")
+    print(f"... tree continues up to {total_nodes}")
+    print()
+
+    # ------------------------------------------------------
+    # Check command-line mode
+    # ------------------------------------------------------
+
+    if len(sys.argv) > 1:
+
+        mode = sys.argv[1].lower()
+
+        # --------------------------------------------------
+        # BFS PROFILING MODE
+        # --------------------------------------------------
+
+        if mode == "bfs":
+
+            GOAL = 15000
+
+            print("\nBFS PROFILING MODE")
+            print("=" * 60)
+
+            print(f"Start node : {START}")
+            print(f"Goal node  : {GOAL}")
+            print(f"Runs       : {PROFILE_RUNS}")
+
+            profile_bfs(
+                tree,
+                START,
+                GOAL,
+                PROFILE_RUNS
+            )
+
+            print("\nBFS profiling workload completed.")
+
+            return
+
+        # --------------------------------------------------
+        # DFS PROFILING MODE
+        # --------------------------------------------------
+
+        elif mode == "dfs":
+
+            GOAL = 15000
+
+            print("\nDFS PROFILING MODE")
+            print("=" * 60)
+
+            print(f"Start node : {START}")
+            print(f"Goal node  : {GOAL}")
+            print(f"Runs       : {PROFILE_RUNS}")
+
+            profile_dfs(
+                tree,
+                START,
+                GOAL,
+                PROFILE_RUNS
+            )
+
+            print("\nDFS profiling workload completed.")
+
+            return
+
+    # ======================================================
+    # NORMAL MODE
+    # ======================================================
+
+    while True:
+
+        try:
+
+            goal = int(
+                input(
+                    "Enter the number you want to search: "
+                )
+            )
+
+            if 1 <= goal <= total_nodes:
+                break
+
+            print(
+                f"Please enter a number between 1 and "
+                f"{total_nodes}."
+            )
+
+        except ValueError:
+
+            print("Please enter a valid integer.")
+
+    print("\n" + "=" * 60)
+    print("SEARCH REQUEST")
+    print("=" * 60)
+
+    print(f"Starting node : {START}")
+    print(f"Searching for : {goal}")
+
+    # ------------------------------------------------------
+    # BFS
+    # ------------------------------------------------------
+
+    bfs_found, bfs_nodes = bfs(
+        tree,
+        START,
+        goal
+    )
+
+    # ------------------------------------------------------
+    # DFS
+    # ------------------------------------------------------
+
+    dfs_found, dfs_nodes = dfs(
+        tree,
+        START,
+        goal
+    )
+
+    # ------------------------------------------------------
+    # Results
+    # ------------------------------------------------------
+
+    print("\n" + "=" * 60)
+    print("                 RESULTS")
+    print("=" * 60)
+
+    print("\nBREADTH FIRST SEARCH (BFS)")
+    print("-" * 40)
+
+    print(f"Target             : {goal}")
+    print(f"Found              : {bfs_found}")
+    print(f"Nodes Expanded     : {bfs_nodes}")
+
+    print("\nDEPTH FIRST SEARCH (DFS)")
+    print("-" * 40)
+
+    print(f"Target             : {goal}")
+    print(f"Found              : {dfs_found}")
+    print(f"Nodes Expanded     : {dfs_nodes}")
+
+    print("\n" + "=" * 60)
+    print("             PROFILING COMMANDS")
+    print("=" * 60)
+
+    print("\nBFS terminal profiling:")
+    print("py-spy top -- python sle2_bfs_vs_dfs.py bfs")
+
+    print("\nDFS terminal profiling:")
+    print("py-spy top -- python sle2_bfs_vs_dfs.py dfs")
+
+    print("\nBFS flame graph:")
+    print(
+        "py-spy record -o bfs_flamegraph.svg "
+        "-- python sle2_bfs_vs_dfs.py bfs"
+    )
+
+    print("\nDFS flame graph:")
+    print(
+        "py-spy record -o dfs_flamegraph.svg "
+        "-- python sle2_bfs_vs_dfs.py dfs"
+    )
+
+    print("=" * 60)
+
+    # ------------------------------------------------------
+    # Visualize graph
+    # ------------------------------------------------------
+
+    visualize_graph(tree)
+
+
+# ==========================================================
+# 9. PROGRAM START
+# ==========================================================
+
+if __name__ == "__main__":
+    main()
