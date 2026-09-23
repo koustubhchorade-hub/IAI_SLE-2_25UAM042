@@ -24,7 +24,7 @@ ChatGPT was used as a learning and development assistant during the SLE-2 experi
 
 3. **Performance Measurement**
 
-   * Explained how Python's `timeit` module can be used to measure algorithm execution time.
+   * Explained how Python's `py-spy` module can be used to measure algorithm execution time.
    * Helped understand how repeated executions can be used to calculate average execution time.
 
 4. **Nodes Expanded**
