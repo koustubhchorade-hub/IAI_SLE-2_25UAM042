@@ -37,10 +37,10 @@ ChatGPT was used as a learning and development assistant during the SLE-2 experi
    * Helped interpret the profiling results obtained from the actual program execution.
    * The final measured values were:
 
-     * BFS average execution time: **4.6994 ms**
-     * DFS average execution time: **7.0109 ms**
-     * BFS nodes expanded: **15,001**
-     * DFS nodes expanded: **13,625**
+     * BFS average execution time: **5.32 ms**
+     * DFS average execution time: **24.23 ms**
+     * BFS nodes expanded: **15,000**
+     * DFS nodes expanded: **54,472**
 
 ### Student's Contribution
 
